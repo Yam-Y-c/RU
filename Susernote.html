@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>히어로 유저노트 메이커 — 백시윤</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Rajdhani:wght@500;700&family=Noto+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14110e;
+    --surface: #1c1712;
+    --surface2: #272018;
+    --border: rgba(235,187,65,0.15);
+    --border2: rgba(235,187,65,0.28);
+    --accent: #e8b83f;
+    --accent2: #e14b46;
+    --text: #f5eee1;
+    --muted: #ad9980;
+    --rank-s: #ffd166;
+    --rank-a: #a78bfa;
+    --rank-b: #e8b83f;
+    --rank-c: #4ade80;
+    --rank-d: #94a3b8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    padding: 0 0 6rem;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* PAGES */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 2rem 2rem 1.5rem;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .header-eyebrow { font-family: 'Rajdhani', sans-serif; font-size: 0.68rem; letter-spacing: 0.25em; color: var(--accent2); text-transform: uppercase; margin-bottom: 0.4rem; }
+  .header-title { font-family: 'Rajdhani', sans-serif; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.1em; color: var(--text); text-transform: uppercase; }
+  .header-title span { color: var(--accent); }
+  .header-desc { font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem; line-height: 1.6; }
+
+  /* MAIN FORM */
+  main { max-width: 720px; margin: 0 auto; padding: 2rem 2rem 0; display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .block { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .block-header { display: flex; align-items: center; gap: 0.6rem; padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--border); background: var(--surface2); }
+  .block-header.collapsible { cursor: pointer; user-select: none; }
+  .block-header.collapsible:hover { background: #30271c; }
+  .block-num { font-family: 'Rajdhani', sans-serif; font-size: 0.65rem; font-weight: 700; color: var(--accent); letter-spacing: 0.15em; min-width: 24px; }
+  .block-title { font-size: 0.78rem; font-weight: 500; letter-spacing: 0.08em; color: var(--text); }
+  .block-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+  .block-body.collapsible-body { overflow: hidden; max-height: 1000px; transition: max-height 0.3s ease, padding 0.3s ease; }
+  .block.collapsed .block-body.collapsible-body { max-height: 0; padding-top: 0; padding-bottom: 0; }
+  .collapse-arrow { font-size: 0.7rem; color: var(--muted); transition: transform 0.25s; flex-shrink: 0; }
+  .block.collapsed .collapse-arrow { transform: rotate(-90deg); }
+  .optional-badge { font-family: 'Rajdhani', sans-serif; font-size: 0.6rem; letter-spacing: 0.1em; color: var(--muted); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; flex-shrink: 0; }
+  .required { color: var(--accent2); margin-left: 3px; font-size: 0.75rem; }
+
+  .field { display: flex; flex-direction: column; gap: 0.4rem; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  label { font-size: 0.7rem; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; font-family: 'Rajdhani', sans-serif; font-weight: 500; }
+  input[type="text"], textarea {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.65rem 0.85rem; color: var(--text); font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.85rem; font-weight: 300; outline: none; transition: border-color 0.2s; width: 100%; line-height: 1.6;
+  }
+  input[type="text"]:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder, textarea::placeholder { color: rgba(173,153,128,0.4); }
+  textarea { resize: vertical; min-height: 80px; }
+
+  .rank-select { display: flex; gap: 0.5rem; }
+  .rank-btn { cursor: pointer; border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 0.5rem 1rem; font-family: 'Rajdhani', sans-serif; font-size: 1rem; font-weight: 700; color: var(--muted); transition: all 0.15s; flex: 1; text-align: center; }
+  .rank-btn:hover { border-color: var(--border2); color: var(--text); }
+  .rank-btn.active-s { border-color: var(--rank-s); color: var(--rank-s); background: rgba(255,209,102,0.07); }
+  .rank-btn.active-a { border-color: var(--rank-a); color: var(--rank-a); background: rgba(167,139,250,0.07); }
+  .rank-btn.active-b { border-color: var(--rank-b); color: var(--rank-b); background: rgba(232,184,63,0.07); }
+  .rank-btn.active-c { border-color: var(--rank-c); color: var(--rank-c); background: rgba(74,222,128,0.07); }
+  .rank-btn.active-d { border-color: var(--rank-d); color: var(--rank-d); background: rgba(148,163,184,0.07); }
+  .rank-desc-text { font-size: 0.75rem; color: var(--muted); min-height: 1.2em; }
+
+  .ability-name-row { display: flex; gap: 0.5rem; align-items: stretch; }
+  .ability-name-row input { flex: 1; }
+  .random-btn { background: rgba(225,75,70,0.08); border: 1px solid rgba(225,75,70,0.25); border-radius: 6px; padding: 0 1rem; color: var(--accent2); font-size: 0.7rem; font-family: 'Rajdhani', sans-serif; font-weight: 700; letter-spacing: 0.1em; cursor: pointer; white-space: nowrap; transition: background 0.15s; flex-shrink: 0; }
+  .random-btn:hover { background: rgba(225,75,70,0.16); }
+  .field-hint { font-size: 0.7rem; color: rgba(173,153,128,0.5); line-height: 1.5; }
+
+  .chip-group { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .chip { cursor: pointer; border: 1px solid var(--border); background: var(--bg); border-radius: 20px; padding: 5px 13px; font-size: 0.78rem; color: var(--muted); transition: all 0.15s; user-select: none; }
+  .chip:hover { border-color: var(--border2); color: var(--text); }
+  .chip.selected { background: rgba(232,184,63,0.1); border-color: rgba(232,184,63,0.4); color: var(--accent); }
+
+  .ld-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .ld-section { display: flex; flex-direction: column; gap: 0.5rem; }
+  .ld-label { font-family: 'Rajdhani', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; display: flex; align-items: center; gap: 0.4rem; }
+  .ld-label.like { color: var(--accent); }
+  .ld-label.dislike { color: var(--accent2); }
+  .ld-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .ld-label.like .ld-dot { background: var(--accent); }
+  .ld-label.dislike .ld-dot { background: var(--accent2); }
+  .ld-input-row { display: flex; gap: 0.4rem; }
+  .ld-input-row input { flex: 1; font-size: 0.8rem; }
+  .ld-add { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0 0.75rem; color: var(--muted); font-size: 1rem; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
+  .ld-add:hover { border-color: var(--border2); color: var(--text); }
+  .ld-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; min-height: 26px; }
+  .ld-tag { display: inline-flex; align-items: center; gap: 0.3rem; border-radius: 4px; padding: 3px 8px 3px 9px; font-size: 0.75rem; }
+  .like-tag { background: rgba(232,184,63,0.08); border: 1px solid rgba(232,184,63,0.2); color: var(--accent); }
+  .dislike-tag { background: rgba(225,75,70,0.08); border: 1px solid rgba(225,75,70,0.2); color: var(--accent2); }
+  .ld-tag button { background: none; border: none; cursor: pointer; color: inherit; opacity: 0.5; font-size: 0.7rem; padding: 0; line-height: 1; }
+  .ld-tag button:hover { opacity: 1; }
+
+  .generate-wrap { padding: 0 2rem; max-width: 720px; margin: 1.5rem auto 0; }
+  .generate-btn { width: 100%; padding: 1rem; background: var(--accent); border: none; border-radius: 8px; color: #21180d; font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: opacity 0.2s; }
+  .generate-btn:hover { opacity: 0.85; }
+
+  /* ── RESULT PAGE ── */
+  #resultPage { max-width: 720px; margin: 0 auto; padding: 2rem 2rem 0; }
+
+  .result-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+  .result-title { font-family: 'Rajdhani', sans-serif; font-size: 0.75rem; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; }
+
+  /* 마크다운 렌더 영역 */
+  .md-view {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.75rem 2rem;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.9;
+    color: var(--muted);
+  }
+  .md-view .md-h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--text);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+  .md-view .md-h2 {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 1.4rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .md-view .md-h2::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .md-view .md-li {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    padding-left: 0.25rem;
+  }
+  .md-view .md-li-bullet { color: var(--accent); flex-shrink: 0; font-size: 0.7rem; margin-top: 0.35rem; }
+  .md-view .md-li-key { color: var(--text); font-weight: 500; white-space: nowrap; }
+  .md-view .md-li-val { color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+  .md-view .md-sub {
+    padding-left: 1.25rem;
+    margin-bottom: 0.2rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+    display: flex;
+    gap: 0.4rem;
+  }
+  .md-view .md-sub-bullet { color: var(--border2); flex-shrink: 0; }
+  .md-view .md-tag-row { display: flex; flex-wrap: wrap; gap: 0.35rem; padding-left: 0.25rem; margin-top: 0.25rem; }
+  .md-view .md-tag { font-size: 0.72rem; border-radius: 20px; padding: 2px 10px; border: 1px solid rgba(232,184,63,0.25); background: rgba(232,184,63,0.07); color: var(--accent); }
+  .md-view .md-tag.like { border-color: rgba(232,184,63,0.25); background: rgba(232,184,63,0.07); color: var(--accent); }
+  .md-view .md-tag.dislike { border-color: rgba(225,75,70,0.25); background: rgba(225,75,70,0.07); color: var(--accent2); }
+  .md-view .md-rank-badge {
+    display: inline-block;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 1px 10px;
+    border-radius: 4px;
+    margin-right: 0.4rem;
+  }
+  .md-view .md-rank-s { background: rgba(255,209,102,0.12); border: 1px solid rgba(255,209,102,0.35); color: var(--rank-s); }
+  .md-view .md-rank-a { background: rgba(167,139,250,0.12); border: 1px solid rgba(167,139,250,0.35); color: var(--rank-a); }
+  .md-view .md-rank-b { background: rgba(232,184,63,0.12); border: 1px solid rgba(232,184,63,0.35); color: var(--rank-b); }
+  .md-view .md-rank-c { background: rgba(74,222,128,0.12); border: 1px solid rgba(74,222,128,0.35); color: var(--rank-c); }
+  .md-view .md-rank-d { background: rgba(148,163,184,0.12); border: 1px solid rgba(148,163,184,0.35); color: var(--rank-d); }
+
+  /* 결과 하단 버튼 */
+  .result-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+  }
+  .btn-back {
+    flex: 1;
+    padding: 0.9rem;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-back:hover { border-color: var(--border2); color: var(--text); }
+  .btn-copy {
+    flex: 2;
+    padding: 0.9rem;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #21180d;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn-copy:hover { opacity: 0.85; }
+  .btn-copy.copied { background: #1a7a4a; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    padding: 0.65rem 1.4rem;
+    border-radius: 8px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s, transform 0.22s;
+    z-index: 10000;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { background: #0f3d28; border: 1px solid rgba(74,222,128,0.35); color: #4ade80; }
+  .toast.error   { background: #3d0f1a; border: 1px solid rgba(225,75,70,0.35); color: var(--accent2); }
+
+  /* MOBILE */
+  @media (max-width: 600px) {
+    header, main, .generate-wrap, #resultPage { padding-left: 1.1rem; padding-right: 1.1rem; }
+    .field-row { grid-template-columns: 1fr; gap: 0.85rem; }
+    .ld-grid { grid-template-columns: 1fr; }
+    .rank-select { gap: 0.3rem; }
+    .rank-btn { padding: 0.5rem 0.2rem; font-size: 0.82rem; min-width: 0; }
+    .rank-desc-text { font-size: 0.7rem; }
+    .random-btn { padding: 0 0.7rem; font-size: 0.62rem; letter-spacing: 0.05em; }
+    .chip { padding: 4px 10px; font-size: 0.74rem; }
+    .block-header { padding: 0.8rem 1rem; }
+    .block-body { padding: 1rem; }
+    .md-view { padding: 1.1rem; font-size: 0.82rem; }
+    .md-view .md-h1 { font-size: 0.95rem; }
+    .md-view .md-h2 { font-size: 0.72rem; }
+    .result-actions { flex-direction: column; gap: 0.5rem; }
+    .btn-back, .btn-copy { flex: none; width: 100%; }
+    .generate-btn { font-size: 0.8rem; }
+    .toast { bottom: 1.25rem; font-size: 0.75rem; padding: 0.55rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══ 입력 페이지 ══ -->
+<div id="inputPage" class="page active">
+
+<header>
+  <div class="header-eyebrow">ROOT · HERO USER NOTE</div>
+  <div class="header-title"><span>User</span> Note</div>
+  <p class="header-desc">히어로 캐릭터 정보를 입력하고 유저노트로 복사하세요. 빈 항목은 생략됩니다.</p>
+</header>
+
+<main>
+
+  <!-- 01 기본 신상 -->
+  <div class="block">
+    <div class="block-header">
+      <span class="block-num">01</span>
+      <span class="block-title">기본 신상<span class="required">*</span></span>
+    </div>
+    <div class="block-body">
+      <div class="field-row">
+        <div class="field"><label>이름</label><input type="text" id="name" placeholder="ex. 한서연"></div>
+        <div class="field"><label>히어로명</label><input type="text" id="codename" placeholder="ex. 아이기스"></div>
+      </div>
+      <div class="field"><label>나이</label><input type="text" id="age" placeholder="ex. 27세"></div>
+      <div class="field-row">
+        <div class="field"><label for="gender">성별</label><input type="text" id="gender" placeholder="ex. 남성 / 여성 / 직접 입력"></div>
+        <div class="field"><label for="height">키</label><input type="text" id="height" placeholder="ex. 184cm"></div>
+      </div>
+      <div class="field">
+        <label>외형</label>
+        <textarea id="appearance" placeholder="ex. 긴 흑발, 날카로운 눈매. 평소엔 캐주얼하게, 출동 시엔 넥서스 슈트 착용." rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 H-Rank -->
+  <div class="block">
+    <div class="block-header">
+      <span class="block-num">02</span>
+      <span class="block-title">H-Rank 등급<span class="required">*</span></span>
+    </div>
+    <div class="block-body">
+      <div class="field">
+        <label>등급 선택</label>
+        <div class="rank-select">
+          <button class="rank-btn" data-rank="S" onclick="selectRank(this)">S</button>
+          <button class="rank-btn" data-rank="A" onclick="selectRank(this)">A</button>
+          <button class="rank-btn" data-rank="B" onclick="selectRank(this)">B</button>
+          <button class="rank-btn" data-rank="C" onclick="selectRank(this)">C</button>
+          <button class="rank-btn" data-rank="D" onclick="selectRank(this)">D</button>
+        </div>
+        <div class="rank-desc-text" id="rankDesc">등급을 선택해 주세요.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 03 초능력 -->
+  <div class="block">
+    <div class="block-header">
+      <span class="block-num">03</span>
+      <span class="block-title">초능력<span class="required">*</span></span>
+    </div>
+    <div class="block-body">
+      <div class="field">
+        <label>초능력 명칭</label>
+        <div class="ability-name-row">
+          <input type="text" id="abilityName" placeholder="ex. 볼텍스">
+          <button class="random-btn" onclick="randomAbility()">RANDOM</button>
+        </div>
+        <div class="field-hint">직접 입력하거나 RANDOM 버튼으로 랜덤 생성하실 수 있습니다.</div>
+      </div>
+      <div class="field">
+        <label>메커니즘</label>
+        <textarea id="abilityMech" placeholder="능력의 원리와 작동 방식을 입력해 주세요." rows="3"></textarea>
+      </div>
+      <div class="field">
+        <label>전투특징</label>
+        <textarea id="abilityBattle" placeholder="전투 스타일과 한계, 부작용 등을 입력해 주세요." rows="3"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- 04 성격 키워드 (선택) -->
+  <div class="block collapsed" id="block04">
+    <div class="block-header collapsible" onclick="toggleBlock('block04')">
+      <span class="block-num">04</span>
+      <span class="block-title">성격 키워드</span>
+      <span class="collapse-arrow" style="margin-left:auto; margin-right:0.4rem;">▾</span>
+      <span class="optional-badge" style="margin-left:0;">OPTIONAL</span>
+    </div>
+    <div class="block-body collapsible-body">
+      <div class="field">
+        <label>항목 선택 (복수 선택 가능)</label>
+        <div class="chip-group" id="chipGroup"></div>
+      </div>
+      <div class="field">
+        <label>직접 입력</label>
+        <div class="ld-input-row">
+          <input type="text" id="customChipInput" placeholder="ex. 4차원, 도도함..." maxlength="15">
+          <button class="ld-add" onclick="addCustomChip()">+</button>
+        </div>
+        <div class="ld-tags" id="customChipWrap" style="margin-top:0.4rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 05 Likes & Dislikes (선택) -->
+  <div class="block collapsed" id="block05">
+    <div class="block-header collapsible" onclick="toggleBlock('block05')">
+      <span class="block-num">05</span>
+      <span class="block-title">Likes &amp; Dislikes</span>
+      <span class="collapse-arrow" style="margin-left:auto; margin-right:0.4rem;">▾</span>
+      <span class="optional-badge" style="margin-left:0;">OPTIONAL</span>
+    </div>
+    <div class="block-body collapsible-body">
+      <div class="ld-grid">
+        <div class="ld-section">
+          <div class="ld-label like"><span class="ld-dot"></span>Likes</div>
+          <div class="ld-input-row">
+            <input type="text" id="likeInput" placeholder="ex. 커피, 야경..." maxlength="20">
+            <button class="ld-add" onclick="addLd('like')">+</button>
+          </div>
+          <div class="ld-tags" id="likeTags"></div>
+        </div>
+        <div class="ld-section">
+          <div class="ld-label dislike"><span class="ld-dot"></span>Dislikes</div>
+          <div class="ld-input-row">
+            <input type="text" id="dislikeInput" placeholder="ex. 혼잡한 곳..." maxlength="20">
+            <button class="ld-add" onclick="addLd('dislike')">+</button>
+          </div>
+          <div class="ld-tags" id="dislikeTags"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 추가 메모 (선택) -->
+  <div class="block collapsed" id="block06">
+    <div class="block-header collapsible" onclick="toggleBlock('block06')">
+      <span class="block-num">06</span>
+      <span class="block-title">추가 메모</span>
+      <span class="collapse-arrow" style="margin-left:auto; margin-right:0.4rem;">▾</span>
+      <span class="optional-badge" style="margin-left:0;">OPTIONAL</span>
+    </div>
+    <div class="block-body collapsible-body">
+      <div class="field">
+        <label>자유 입력</label>
+        <textarea id="memo" placeholder="특수한 설정, 원하는 서사 방향, 시윤 또는 루트와의 기존 관계(있는 경우) 등 자유롭게 입력해 주세요." rows="4"></textarea>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="generate-wrap">
+  <button class="generate-btn" onclick="generate()">노트 생성하기</button>
+</div>
+
+</div><!-- /inputPage -->
+
+
+<!-- ══ 결과 페이지 ══ -->
+<div id="resultPage" class="page">
+
+  <div style="max-width:720px; margin:0 auto; padding: 2rem 2rem 0;">
+    <div class="result-topbar">
+      <span class="result-title">Generated Note</span>
+    </div>
+
+    <div class="md-view" id="mdView"></div>
+    <details style="margin-top:1rem"><summary style="cursor:pointer;color:var(--muted);font-size:.8rem">복사용 원문 보기</summary><textarea id="rawNote" readonly aria-label="유저노트 원문" rows="12" style="margin-top:.6rem"></textarea></details>
+
+    <div class="result-actions">
+      <button class="btn-back" onclick="goBack()">← 돌아가기</button>
+      <button class="btn-copy" id="copyBtn" onclick="copyNote()">복사하기</button>
+    </div>
+  </div>
+
+</div><!-- /resultPage -->
+
+<div class="toast" id="toast"></div>
+
+
+<script>
+  /* ── COLLAPSE ── */
+  function toggleBlock(id) { document.getElementById(id).classList.toggle('collapsed'); }
+
+  /* ── PAGE SWITCH ── */
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function goBack() { showPage('inputPage'); }
+
+  /* ── RANK ── */
+  const rankInfo = {
+    S: { cls: 'active-s', desc: '국가 전력급 — 초대형 재난 단독 진압. 최상위 맞춤형 장비 지급.' },
+    A: { cls: 'active-a', desc: '광역 방어급 — 두터운 팬덤. 리미트 부분 해제 권한 부여.' },
+    B: { cls: 'active-b', desc: '전술 타격급 — 팀 단위 작전 리더. 스폰서 확보 중인 허리 계층.' },
+    C: { cls: 'active-c', desc: '국지 대처급 — 치안 유지 최전선. 기본형 넥서스 슈트 지급.' },
+    D: { cls: 'active-d', desc: '신인 / 비전투 — 행정·피해 복구 위주. 열악한 처우.' },
+  };
+  let selectedRank = '';
+  function selectRank(btn) {
+    document.querySelectorAll('.rank-btn').forEach(b => b.className = 'rank-btn');
+    selectedRank = btn.dataset.rank;
+    btn.classList.add(rankInfo[selectedRank].cls);
+    document.getElementById('rankDesc').textContent = rankInfo[selectedRank].desc;
+  }
+
+  /* ── RANDOM ABILITY ── */
+  const abilityPool = [
+    { name: '세이스믹', mech: '지면과 접촉한 신체 부위를 통해 진동 에너지를 지층으로 전달, 임의의 지점에서 진동파를 역방출시킴.', battle: '지형 자체를 무기로 삼는 광역 제어형. 진원지를 분산시켜 적의 회피를 봉쇄하며, 고출력 집중 시 반경 30m 내 구조물 붕괴 유발.' },
+    { name: '볼텍스', mech: '체내 기압을 급격히 조작해 주변 공기를 고속 회전시키는 기류 장을 생성함.', battle: '근접과 원거리를 모두 커버하는 압제형. 회오리를 방어막으로 전개하거나 집속해 절단력을 가진 기류 탄환으로 압축 방출.' },
+    { name: '플럭스', mech: '자신의 운동 에너지를 실시간으로 흡수·저장하고, 원하는 시점에 특정 벡터로 폭발적으로 재방출함.', battle: '피격될수록 강해지는 역발형. 흡수량이 임계치를 초과하면 전방위 폭발 방출로 자동 전환되는 과부하 위험이 존재.' },
+    { name: '임팩터', mech: '주먹·발·어깨 등 신체 타격 부위에 순간적으로 초고밀도 압력을 집중시켜 충격 배율을 극대화함.', battle: '단일 타격에 특화된 파괴형. 타격 순간의 접촉면이 좁을수록 관통력이 기하급수적으로 상승하며, 과도한 연속 사용 시 자신의 골격에 균열 누적.' },
+    { name: '피어스', mech: '손끝에서 밀도가 극도로 압축된 에너지 침을 생성, 어떤 물질이든 분자 결합을 무력화하며 관통함.', battle: '방어 무효화에 특화된 저격형. 관통 후 대상 내부에서 에너지가 역방향으로 팽창하는 2단 폭발을 선택적으로 발동 가능.' },
+    { name: '프로스트', mech: '체온을 자유자재로 낮춰 신체 표면과 주변 공기를 절대온도에 가깝게 급랭시킴.', battle: '광역 제빙과 정밀 결빙을 혼용하는 봉쇄형. 상대의 호흡기를 얼리거나 관절을 동결시키는 등 신체 부위를 핀포인트로 타격 가능. 장시간 사용 시 자신의 체온 조절 기능에도 영향.' },
+    { name: '오버로드', mech: '자신의 신경계에 과전류를 인위적으로 흘려 신체 능력 전반을 한계치 이상으로 강제 부스팅함.', battle: '단기 폭발력에 특화된 초과형. 부스팅 시간에 비례해 전투 종료 후 신경계 손상이 누적되며, 임계 초과 시 일시적 의식 소실.' },
+    { name: '블라스트', mech: '체내에서 폭발성 에너지를 압축 생성해 손바닥을 통해 작렬시키는 방식으로 방출함.', battle: '직선 제압에 최적화된 공세형. 방출 각도와 폭을 조절해 단일 집속탄과 산탄 형태 중 선택 발동하며, 연속 발사 시 반동으로 인한 관절 부담 발생.' },
+    { name: '스트라이커', mech: '근육의 수축·이완 속도를 신경 신호 단계에서 가속시켜 타격 속도를 일반인의 수십 배로 끌어올림.', battle: '속도와 연타에 특화된 타격형. 개별 타격의 파괴력보다 압도적인 연사 속도로 방어 자체를 무력화하는 방식. 능력 해제 직후 근섬유 파열 위험.' },
+    { name: '터미네이터', mech: '대상의 물리적 복원력을 억제하는 에너지를 주입해, 피격 부위의 자연 회복과 능력 재생을 일시 차단함.', battle: '재생·회복 계열 초능력자를 상대로 최고 효율을 발휘하는 카운터형. 직접 타격보다는 접촉 기반으로 작동하며 지속 시간은 에너지 주입량에 비례.' },
+    { name: '리퍼', mech: '공기 중에 불가시 예리한 에너지 막을 전개해 접촉하는 모든 물질을 분자 단위로 절단함.', battle: '넓은 범위의 절단 공간을 형성하는 지역 거부형. 에너지 막은 무차별 절단이므로 아군과의 거리 관리가 핵심이며, 밀집 전투에는 부적합.' },
+    { name: '이그나이트', mech: '대상의 산화 반응을 강제 가속시켜 마찰 없이 자연 발화를 유도함. 방출 에너지 조절로 화력 규모 조정 가능.', battle: '접촉 없이 원거리 발화가 가능한 점화형. 유기물·가연성 물질에 특히 효과적이며, 고출력 시 주변 산소 소모로 인한 질식 위험 동반.' },
+    { name: '베일', mech: '자신과 지정 대상을 감싸는 굴절막을 형성해 외부로부터의 탐지(시각·열화상·전파)를 일괄 차단함.', battle: '은폐와 기습에 특화된 잠행형. 이동 중 굴절막 유지가 가능하나 충격을 받으면 막이 붕괴하며, 공격 발동 시 은폐가 해제됨.' },
+    { name: '플레어', mech: '신체에서 고강도 섬광과 열파를 동시에 방출해 광범위한 감각 교란과 화상을 유발함.', battle: '대규모 교란에 특화된 제압형. 섬광과 열파의 비율을 조절해 실명 우선 또는 화상 우선 모드로 전환 가능. 밀폐 공간에서 위력이 극대화됨.' },
+    { name: '스캐너', mech: '주변 공간에 감지 불가한 탐색파를 방사해 생명체의 위치·신체 상태·심박수 등 생체 데이터를 실시간 수집함.', battle: '완전한 정보 우위를 제공하는 정찰형. 벽·장애물 투과 탐지가 가능하며, 탐색 범위를 넓힐수록 집중도가 분산되어 정밀도가 낮아짐.' },
+    { name: '리바이브', mech: '손을 매개로 대상의 세포 재생 속도를 강제 가속시켜 손상된 조직을 빠르게 복원함.', battle: '전장 유지에 특화된 회복형. 치명상 수준의 회복도 가능하나 시술자 자신의 생체 에너지를 소모하며, 무리한 사용 시 시술자가 먼저 쓰러짐.' },
+    { name: '센티넬', mech: '자신을 중심으로 반구형 감지망을 전개해 망 내부로 진입하는 모든 물체의 궤적과 속도를 실시간으로 인식함.', battle: '팀 전체의 방어를 책임지는 수호형. 감지망 내 아군의 위기 상황을 자동 경보하며, 고출력 전개 시 감지망 자체가 물리적 장벽으로 작동 가능.' },
+    { name: '트레이서', mech: '대상에게 비가시 마킹 에너지를 심어 이후 어느 거리에서든 위치·이동 경로·바이탈을 추적함.', battle: '장거리 추적과 유도에 특화된 감시형. 마킹된 대상에게 아군의 원거리 공격을 유도하는 조준 보정 기능으로도 활용 가능.' },
+    { name: '리플렉터', mech: '신체 표면에 에너지 반사막을 형성해 물리적 충격과 에너지 기반 공격을 원래 방향으로 되돌림.', battle: '방어와 역공을 동시에 수행하는 카운터형. 반사 각도를 미세 조정할 수 있어 반격 방향을 선택 가능. 충격량이 막의 한계를 초과하면 반사막이 파열됨.' },
+    { name: '실루엣', mech: '자신의 신체 윤곽을 주변 환경과 동화시켜 시각적 피탐을 최소화함. 열화상과 음파 기만도 부분적으로 가능.', battle: '단독 침투와 탈출에 특화된 잠입형. 완전한 투명화가 아닌 환경 동화 방식이므로 배경이 복잡할수록 효과가 상승하며 단색 환경에서는 효율이 급감.' },
+    { name: '디텍터', mech: '반경 내 초능력 발현 시 발생하는 에너지 고조파를 감지해 능력자의 위치와 능력 유형을 특정함.', battle: '능력자 대응 전투의 판도를 바꾸는 식별형. 적의 능력 발동 직전 미세 에너지 변화를 포착해 선행 경고가 가능하며, 위장·변장한 능력자 탐지에 특히 유효.' },
+    { name: '퓨리파이어', mech: '대상의 신체 내부에 침투한 독소·오염 물질·바이러스를 에너지로 분해해 무력화함.', battle: '생화학 위협 대응에 특화된 정화형. 자신에게도 적용 가능하며, 코드 그린 상황에서 방호조와 연계 시 최고 효율 발휘. 분해 속도는 오염 농도에 비례해 소모 에너지가 증가.' },
+    { name: '앰플리파이어', mech: '접촉을 통해 대상 능력자의 에너지 출력을 일시적으로 증폭시킴. 자신의 에너지를 소모해 상대의 능력을 끌어올리는 방식.', battle: '팀 구성에 따라 전황을 뒤집는 증폭형. 시술자 자신은 증폭 중 전투 불가 상태에 준하는 에너지 소진을 감수해야 함.' },
+    { name: '가이드', mech: '반경 내 아군의 감각 정보를 자신의 신경망에 동기화해 통합 지휘망을 형성, 아군 전원에게 전장 정보를 실시간 공유함.', battle: '팀 전체의 판단력을 극대화하는 지휘형. 동기화 인원이 많을수록 시술자의 인지 부하가 기하급수적으로 증가하며, 한계 초과 시 감각 과부하로 인한 일시 기능 상실.' },
+    { name: '아르케', mech: '주변의 원소 구성을 인식하고 물질의 기본 성질을 재배열해 상태와 형태를 변환함.', battle: '환경을 소재로 삼는 창조형. 공기를 고체화하거나 금속을 액화시키는 등 광범위한 물질 조작이 가능하나 복잡한 변환일수록 처리 시간과 에너지 소모가 급증.' },
+    { name: '오라클', mech: '확률 연산 형태로 가까운 미래의 사건 흐름을 수초~수십 초 앞서 감지함. 감지 정밀도는 집중도와 비례.', battle: '선제 대응에 특화된 예지형. 감지한 미래는 고정이 아닌 확률 분포이므로 변수가 많은 혼전 상황에서는 예측 정확도가 저하됨.' },
+    { name: '넥서스', mech: '두 개 이상의 공간 좌표를 연결하는 통로를 일시적으로 생성해 물체와 인원을 즉각 이동시킴.', battle: '전장 기동력을 극대화하는 연결형. 통로 생성에 좌표 인식이 필요하며 미지의 공간으로의 연결은 불가. 연속 생성 시 통로 안정성이 저하되어 이송 중 좌표 오차 위험.' },
+    { name: '키메라', mech: '다른 능력자와의 접촉을 통해 그 능력의 일부를 일시적으로 복제·발현시킴. 원본 능력자의 동의 없이도 작동하나 효율이 절반 이하로 감소.', battle: '상황에 따라 최적 능력을 선택하는 적응형. 동시 발현은 2개까지이며, 초과 시 능력 간 간섭으로 양쪽 모두 불안정해짐.' },
+    { name: '카오스', mech: '주변의 에너지 흐름을 무작위로 교란시켜 능력 발현에 필요한 에너지 패턴을 붕괴시킴.', battle: '능력자 전체를 상대로 유효한 무력화형. 자신의 에너지도 교란 범위에 포함되므로 운용 중 자신의 능력도 불안정해지는 양날의 검.' },
+    { name: '팬텀', mech: '자신의 신체 밀도를 낮춰 물리적 실체를 반비실체 상태로 전환, 대부분의 물리 공격과 에너지 공격을 통과시킴.', battle: '무적에 가까운 회피형. 비실체 상태에서는 공격도 불가하며, 전환 빈도가 잦을수록 신체 밀도 복원에 필요한 에너지 소모가 누적됨.' },
+    { name: '에코', mech: '자신이 직전에 사용한 능력의 잔향 에너지를 포집해 동일 효과를 즉각 재발동시킴. 단, 원본 발동의 70% 출력으로 고정.', battle: '연속 발동에 특화된 반향형. 에코 발동은 원본 능력의 쿨타임과 무관하게 즉시 발동되나, 에코의 에코는 불가능.' },
+    { name: '크로노스', mech: '자신을 중심으로 반경 내 시간 흐름을 느리게 하거나 빠르게 하는 시간 밀도 조작이 가능함.', battle: '전황 전체를 제어하는 지배형. 시간 감속 범위 내에서 자신만 정상 속도로 행동 가능하며, 범위와 배율이 높을수록 에너지 소모가 기하급수적으로 증가.' },
+    { name: '리미터', mech: '대상 능력자의 에너지 회로에 개입해 능력 출력에 상한선을 부과하거나 발현 자체를 차단함.', battle: '강력한 능력자를 상대로 특효를 발휘하는 봉인형. S랭크 빌런 대상으로는 완전 봉인이 불가능하고 출력 감소에 그침.' },
+    { name: '아스트라', mech: '의식체를 신체에서 분리해 물리 법칙에 구애받지 않는 고순도 에너지 형태로 공간을 이동하며 작전을 수행함.', battle: '정찰과 원격 개입을 동시에 수행하는 유체형. 분리 중 신체는 무방비 상태로 유지되며, 의식체가 과도한 에너지 간섭을 받을 경우 신체로의 귀환이 지연될 위험이 있음.' },
+  ];
+
+  function randomAbility() {
+    const pick = abilityPool[Math.floor(Math.random() * abilityPool.length)];
+    document.getElementById('abilityName').value = pick.name;
+    document.getElementById('abilityMech').value = pick.mech;
+    document.getElementById('abilityBattle').value = pick.battle;
+  }
+
+  /* ── PERSONALITY CHIPS ── */
+  const personalityOptions = [
+    '냉정함','온화함','충동적','신중함','고집스러움','유연함','직선적','눈치 빠름',
+    '완벽주의','게으름','책임감 강함','겁쟁이','용감함','다정함','무뚝뚝함',
+    '내성적','외향적','기분파','독립적','감성적','츤데레','쿨데레','허당','현실주의','이상주의'
+  ];
+  let selectedPersonality = new Set();
+  let customPersonality = [];
+
+  function initChips() {
+    const group = document.getElementById('chipGroup');
+    personalityOptions.forEach(opt => {
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.textContent = opt;
+      chip.onclick = () => {
+        if (selectedPersonality.has(opt)) { selectedPersonality.delete(opt); chip.classList.remove('selected'); }
+        else { selectedPersonality.add(opt); chip.classList.add('selected'); }
+      };
+      group.appendChild(chip);
+    });
+  }
+  initChips();
+
+  function addCustomChip() {
+    const input = document.getElementById('customChipInput');
+    const val = input.value.trim();
+    if (!val || selectedPersonality.has(val) || customPersonality.includes(val)) return;
+    customPersonality.push(val);
+    selectedPersonality.add(val);
+    renderCustomChips();
+    input.value = '';
+    input.focus();
+  }
+  function removeCustomChip(val) {
+    customPersonality = customPersonality.filter(v => v !== val);
+    selectedPersonality.delete(val);
+    renderCustomChips();
+  }
+  function renderCustomChips() {
+    renderTags('customChipWrap', customPersonality, 'like-tag', removeCustomChip);
+  }
+  document.getElementById('customChipInput').addEventListener('keydown', e => { if(e.key==='Enter'){e.preventDefault();addCustomChip();} });
+
+  function renderTags(id, items, cls, remove) {
+    const wrap = document.getElementById(id);
+    wrap.replaceChildren();
+    items.forEach(value => {
+      const tag = document.createElement('span');
+      tag.className = 'ld-tag ' + cls;
+      tag.appendChild(document.createTextNode(value));
+      const button = document.createElement('button');
+      button.textContent = '✕';
+      button.setAttribute('aria-label', value + ' 삭제');
+      button.onclick = () => remove(value);
+      tag.appendChild(button);
+      wrap.appendChild(tag);
+    });
+  }
+  /* ── LIKES / DISLIKES ── */
+  let likes = [], dislikes = [];
+  function addLd(type) {
+    const input = document.getElementById(type === 'like' ? 'likeInput' : 'dislikeInput');
+    const val = input.value.trim();
+    const arr = type === 'like' ? likes : dislikes;
+    if (!val || arr.includes(val) || arr.length >= 10) return;
+    arr.push(val); renderLd(type); input.value = ''; input.focus();
+  }
+  function removeLd(type, val) {
+    if (type === 'like') likes = likes.filter(v => v !== val);
+    else dislikes = dislikes.filter(v => v !== val);
+    renderLd(type);
+  }
+  function renderLd(type) {
+    const arr = type === 'like' ? likes : dislikes;
+    const wrapId = type === 'like' ? 'likeTags' : 'dislikeTags';
+    const cls = type === 'like' ? 'like-tag' : 'dislike-tag';
+    renderTags(wrapId, arr, cls, value => removeLd(type, value));
+  }
+  document.getElementById('likeInput').addEventListener('keydown', e => { if(e.key==='Enter'){e.preventDefault();addLd('like');} });
+  document.getElementById('dislikeInput').addEventListener('keydown', e => { if(e.key==='Enter'){e.preventDefault();addLd('dislike');} });
+
+  /* ── GENERATE ── */
+  let rawMarkdown = '';
+
+  function generate() {
+    const name        = document.getElementById('name').value.trim();
+    const codename    = document.getElementById('codename').value.trim();
+    const age         = document.getElementById('age').value.trim();
+    const gender = document.getElementById('gender').value.trim();
+    const height = document.getElementById('height').value.trim();
+    const appearance  = document.getElementById('appearance').value.trim();
+    const abilityName = document.getElementById('abilityName').value.trim();
+    const abilityMech = document.getElementById('abilityMech').value.trim();
+    const abilityBattle = document.getElementById('abilityBattle').value.trim();
+    const memo        = document.getElementById('memo').value.trim();
+    const allPersonality = [...selectedPersonality];
+
+    /* 마크다운 원문 생성 */
+    const md = [];
+    md.push('# USER NOTE');
+    md.push('');
+    md.push('## 기본 신상');
+    md.push('- 신분: 협회 소속 등록 히어로');
+    if (name)       md.push(`- 이름: ${name}`);
+    if (codename)   md.push(`- 히어로명: ${codename}`);
+    if (age)        md.push(`- 나이: ${age}`);
+    if (gender) md.push(`- 성별: ${gender}`);
+    if (height) md.push(`- 키: ${height}`);
+    if (appearance) md.push(`- 외형: ${appearance}`);
+    md.push('');
+    md.push('## H-Rank');
+    if (selectedRank) {
+      md.push(`- 등급: ${selectedRank}-Rank`);
+      md.push(`- ${rankInfo[selectedRank].desc}`);
+    } else { md.push('- 미설정'); }
+    md.push('');
+    md.push('## 초능력');
+    if (abilityName) md.push(`- 명칭: ${abilityName}`);
+    if (abilityMech) md.push(`- 메커니즘: ${abilityMech}`);
+    if (abilityBattle) md.push(`- 전투특징: ${abilityBattle}`);
+    if (!abilityName && !abilityMech && !abilityBattle) md.push('- 미입력');
+    if (allPersonality.length > 0) {
+      md.push('');
+      md.push('## 성격');
+      md.push(`- ${allPersonality.join(' / ')}`);
+    }
+    if (likes.length > 0 || dislikes.length > 0) {
+      md.push('');
+      md.push('## Likes & Dislikes');
+      if (likes.length > 0)    md.push(`- Likes: ${likes.join(', ')}`);
+      if (dislikes.length > 0) md.push(`- Dislikes: ${dislikes.join(', ')}`);
+    }
+    if (memo) { md.push(''); md.push('## 추가 메모'); md.push(memo); }
+
+    rawMarkdown = md.join('\n');
+    document.getElementById('rawNote').value = rawMarkdown;
+
+    /* 시각 렌더링 */
+    renderMd({
+      name, codename, age, gender, height, appearance,
+      abilityName, abilityMech, abilityBattle,
+      personality: allPersonality,
+      likes, dislikes, memo
+    });
+
+    showPage('resultPage');
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function renderMd(d) {
+    const rankCls = d.abilityName ? '' : '';
+    const rBadge = selectedRank
+      ? `<span class="md-rank-badge md-rank-${selectedRank.toLowerCase()}">${selectedRank}</span>`
+      : '미설정';
+
+    let html = '';
+
+    /* 제목 */
+    html += `<div class="md-h1"># USER NOTE</div>`;
+
+    /* 기본 신상 */
+    html += `<div class="md-h2">## 기본 신상</div>`;
+    html += mdLi('신분', '협회 소속 등록 히어로');
+    if (d.gender) html += mdLi('성별', d.gender);
+    if (d.height) html += mdLi('키', d.height);
+    if (d.name)       html += mdLi('이름', d.name);
+    if (d.codename)   html += mdLi('히어로명', d.codename);
+    if (d.age)        html += mdLi('나이', d.age);
+    if (d.appearance) html += mdLi('외형', d.appearance);
+
+    /* H-Rank */
+    html += `<div class="md-h2">## H-Rank</div>`;
+    html += `<div class="md-li"><span class="md-li-bullet">▸</span><span>${rBadge}${selectedRank ? rankInfo[selectedRank].desc : '미설정'}</span></div>`;
+
+    /* 초능력 */
+    html += `<div class="md-h2">## 초능력</div>`;
+    if (d.abilityName)   html += mdLi('명칭', d.abilityName);
+    if (d.abilityMech)   html += mdLi('메커니즘', d.abilityMech);
+    if (d.abilityBattle) html += mdLi('전투특징', d.abilityBattle);
+    if (!d.abilityName && !d.abilityMech && !d.abilityBattle) html += `<div class="md-li"><span class="md-li-bullet">▸</span><span class="md-li-val">미입력</span></div>`;
+
+    /* 성격 */
+    if (d.personality.length > 0) {
+      html += `<div class="md-h2">## 성격</div>`;
+      html += `<div class="md-tag-row">${d.personality.map(p => `<span class="md-tag">${escapeHtml(p)}</span>`).join('')}</div>`;
+    }
+
+    /* Likes & Dislikes */
+    if (d.likes.length > 0 || d.dislikes.length > 0) {
+      html += `<div class="md-h2">## Likes &amp; Dislikes</div>`;
+      if (d.likes.length > 0)
+        html += `<div class="md-li" style="flex-wrap:wrap; gap:0.3rem;"><span class="md-li-bullet">▸</span><span class="md-li-key" style="color:var(--accent);">Likes</span><span style="margin:0 0.2rem; color:var(--border2);">—</span>${d.likes.map(v=>`<span class="md-tag like">${escapeHtml(v)}</span>`).join('')}</div>`;
+      if (d.dislikes.length > 0)
+        html += `<div class="md-li" style="flex-wrap:wrap; gap:0.3rem; margin-top:0.4rem;"><span class="md-li-bullet">▸</span><span class="md-li-key" style="color:var(--accent2);">Dislikes</span><span style="margin:0 0.2rem; color:var(--border2);">—</span>${d.dislikes.map(v=>`<span class="md-tag dislike">${escapeHtml(v)}</span>`).join('')}</div>`;
+    }
+
+    /* 추가 메모 */
+    if (d.memo) {
+      html += `<div class="md-h2">## 추가 메모</div>`;
+      html += `<div class="md-li"><span class="md-li-bullet">▸</span><span class="md-li-val" style="white-space:pre-wrap;">${escapeHtml(d.memo)}</span></div>`;
+    }
+
+    document.getElementById('mdView').innerHTML = html;
+    document.getElementById('copyBtn').textContent = '복사하기';
+    document.getElementById('copyBtn').classList.remove('copied');
+  }
+
+  function mdLi(key, val) {
+    return `<div class="md-li"><span class="md-li-bullet">▸</span><span class="md-li-key">${key}</span><span style="color:var(--border2); margin: 0 0.3rem;">—</span><span class="md-li-val">${escapeHtml(val)}</span></div>`;
+  }
+
+  /* ── TOAST ── */
+  let toastTimer = null;
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type}`;
+    void t.offsetWidth;
+    t.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.classList.remove('show'); }, 2200);
+  }
+
+  /* ── COPY ── */
+  function copyNote() {
+    if (!rawMarkdown) { showToast('복사할 내용이 없습니다.', 'error'); return; }
+    const write = navigator.clipboard && navigator.clipboard.writeText
+      ? navigator.clipboard.writeText(rawMarkdown)
+      : Promise.reject(new Error('Clipboard unavailable'));
+    write
+      .then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.textContent = '복사됨 ✓';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = '복사하기'; btn.classList.remove('copied'); }, 2000);
+        showToast('클립보드에 복사되었습니다.', 'success');
+      })
+      .catch(() => {
+        const field = document.getElementById('rawNote');
+        field.parentElement.open = true;
+        field.focus();
+        field.select();
+        showToast('원문을 선택했어요. 길게 눌러 복사해 주세요.', 'error');
+      });
+  }
+</script>
+</body>
+</html>
